@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="otile_tb.wdb" id="1" type="auto">
+         <top_modules>
+            <top_module name="numeric_std" />
+            <top_module name="otile_tb" />
+            <top_module name="std_logic_1164" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <WVObjectSize size="13" />
+   <wave_markers>
+      <marker time="100011185000000" label="" />
+   </wave_markers>
+   <wvobject fp_name="/otile_tb/clk" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+      <obj_property name="CustomSignalColor">#ffffff</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/rst" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">rst</obj_property>
+      <obj_property name="ObjectShortName">rst</obj_property>
+      <obj_property name="UseCustomSignalColor">true</obj_property>
+      <obj_property name="CustomSignalColor">#ff0000</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/clk_period" type="other" db_ref_id="1">
+      <obj_property name="ElementShortName">clk_period</obj_property>
+      <obj_property name="ObjectShortName">clk_period</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/vdd" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">vdd</obj_property>
+      <obj_property name="ObjectShortName">vdd</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/vbat" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">vbat</obj_property>
+      <obj_property name="ObjectShortName">vbat</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/nreset" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">nreset</obj_property>
+      <obj_property name="ObjectShortName">nreset</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/sck" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">sck</obj_property>
+      <obj_property name="ObjectShortName">sck</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/sdo" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">sdo</obj_property>
+      <obj_property name="ObjectShortName">sdo</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/state" type="other" db_ref_id="1">
+      <obj_property name="ElementShortName">state</obj_property>
+      <obj_property name="ObjectShortName">state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/timer0" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">timer0[23:0]</obj_property>
+      <obj_property name="ObjectShortName">timer0[23:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/spidata" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">spidata[7:0]</obj_property>
+      <obj_property name="ObjectShortName">spidata[7:0]</obj_property>
+      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/spistrobe" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">spistrobe</obj_property>
+      <obj_property name="ObjectShortName">spistrobe</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/spibusy" type="logic" db_ref_id="1">
+      <obj_property name="ElementShortName">spibusy</obj_property>
+      <obj_property name="ObjectShortName">spibusy</obj_property>
+   </wvobject>
+</wave_config>
