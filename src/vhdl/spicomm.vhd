@@ -10,7 +10,7 @@ entity spicomm is
 	Port (
     	clk : in std_logic;
         rst : in std_logic;
-        data : inout std_logic_vector(bitwidth-1 downto 0);
+        data : in std_logic_vector(bitwidth-1 downto 0);
     	strobe : in std_logic;
         busy : out std_logic;
 		sck : out std_logic;
@@ -36,7 +36,7 @@ begin
 	busy <= busy_int;
 	sdo <= sdo_int;
 
-	comb : process(sdi, strobe, state, shifter, busy_int, sdo_int, clkdiv, bitcount)
+	comb : process(sdi, strobe, state, shifter, busy_int, sdo_int, clkdiv, bitcount, data)
     	variable state_next : states;
         variable shifter_next : std_logic_vector(shifter'range);
         variable busy_next : std_logic;
@@ -51,8 +51,8 @@ begin
         clkdiv_next := clkdiv;
         bitcount_next := bitcount;
         
-        data <= (others => 'Z');
-        sck <= '0';
+--      data <= (others => 'Z');
+        sck <= '1';
         
         case state is
         
@@ -106,7 +106,7 @@ begin
                 
             when ST_OUT =>
             	-- output is available on pins for one clock cycle, must be latched on the clock rising edge after busy falling edge
-            	data <= shifter;
+--            	data <= shifter;
                 state_next := ST_WAIT;
                 
             when others =>
