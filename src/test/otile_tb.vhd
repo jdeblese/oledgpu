@@ -6,31 +6,33 @@ entity otile_tb is
 end otile_tb;
 
 architecture Behavioral of otile_tb is 
-	constant clk_period : time := 10 ns;
-	signal clk : std_logic := '0';
-	
-	signal rst : std_logic := '1';
+    constant clk_period : time := 10 ns;
+    signal clk : std_logic := '0';
+    
+    signal rst : std_logic := '1';
 begin
 
-	clk <= not clk after clk_period / 2;
+    clk <= not clk after clk_period / 2;
 
-	DUT : entity work.otile
-		port map (
-			clk => clk,
-			rst => rst,
-			VDD => open,
-			VBAT => open,
-			nRESET => open,
-			SCK => open,
-			SDO => open );
+    DUT : entity work.otile
+        port map (
+            clk => clk,
+            rst => rst,
+            OLED_VDD => open,
+            OLED_BAT => open,
+            OLED_RST => open,
+            OLED_CS => open,
+            OLED_SCK => open,
+            OLED_MOSI => open,
+            OLED_CD => open );
 
-	process
-	begin
-		wait for clk_period * 10.25;
-		rst <= '0';
-		wait for clk_period;
+    process
+    begin
+        wait for clk_period * 10.25;
+        rst <= '0';
+        wait for clk_period;
 
-		wait;
-	end process;
+        wait;
+    end process;
 
 end Behavioral;

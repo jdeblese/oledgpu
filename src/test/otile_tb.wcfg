@@ -11,7 +11,7 @@
          </top_modules>
       </db_ref>
    </db_ref_list>
-   <WVObjectSize size="13" />
+   <WVObjectSize size="11" />
    <wave_markers>
       <marker time="100011185000000" label="" />
    </wave_markers>
@@ -31,29 +31,19 @@
       <obj_property name="ElementShortName">clk_period</obj_property>
       <obj_property name="ObjectShortName">clk_period</obj_property>
    </wvobject>
-   <wvobject fp_name="/otile_tb/DUT/vdd" type="logic" db_ref_id="1">
-      <obj_property name="ElementShortName">vdd</obj_property>
-      <obj_property name="ObjectShortName">vdd</obj_property>
-   </wvobject>
-   <wvobject fp_name="/otile_tb/DUT/vbat" type="logic" db_ref_id="1">
-      <obj_property name="ElementShortName">vbat</obj_property>
-      <obj_property name="ObjectShortName">vbat</obj_property>
-   </wvobject>
-   <wvobject fp_name="/otile_tb/DUT/nreset" type="logic" db_ref_id="1">
-      <obj_property name="ElementShortName">nreset</obj_property>
-      <obj_property name="ObjectShortName">nreset</obj_property>
-   </wvobject>
-   <wvobject fp_name="/otile_tb/DUT/sck" type="logic" db_ref_id="1">
-      <obj_property name="ElementShortName">sck</obj_property>
-      <obj_property name="ObjectShortName">sck</obj_property>
-   </wvobject>
-   <wvobject fp_name="/otile_tb/DUT/sdo" type="logic" db_ref_id="1">
-      <obj_property name="ElementShortName">sdo</obj_property>
-      <obj_property name="ObjectShortName">sdo</obj_property>
-   </wvobject>
    <wvobject fp_name="/otile_tb/DUT/state" type="other" db_ref_id="1">
       <obj_property name="ElementShortName">state</obj_property>
       <obj_property name="ObjectShortName">state</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/cmdcounter" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">cmdcounter[3:0]</obj_property>
+      <obj_property name="ObjectShortName">cmdcounter[3:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject fp_name="/otile_tb/DUT/pointer" type="array" db_ref_id="1">
+      <obj_property name="ElementShortName">pointer[8:0]</obj_property>
+      <obj_property name="ObjectShortName">pointer[8:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
    </wvobject>
    <wvobject fp_name="/otile_tb/DUT/timer0" type="array" db_ref_id="1">
       <obj_property name="ElementShortName">timer0[23:0]</obj_property>
@@ -63,7 +53,7 @@
    <wvobject fp_name="/otile_tb/DUT/spidata" type="array" db_ref_id="1">
       <obj_property name="ElementShortName">spidata[7:0]</obj_property>
       <obj_property name="ObjectShortName">spidata[7:0]</obj_property>
-      <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
    </wvobject>
    <wvobject fp_name="/otile_tb/DUT/spistrobe" type="logic" db_ref_id="1">
       <obj_property name="ElementShortName">spistrobe</obj_property>
@@ -72,5 +62,37 @@
    <wvobject fp_name="/otile_tb/DUT/spibusy" type="logic" db_ref_id="1">
       <obj_property name="ElementShortName">spibusy</obj_property>
       <obj_property name="ObjectShortName">spibusy</obj_property>
+   </wvobject>
+   <wvobject fp_name="group24" type="group">
+      <obj_property name="label">OLED Output</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/otile_tb/DUT/oled_vdd" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_vdd</obj_property>
+         <obj_property name="ObjectShortName">oled_vdd</obj_property>
+      </wvobject>
+      <wvobject fp_name="/otile_tb/DUT/oled_bat" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_bat</obj_property>
+         <obj_property name="ObjectShortName">oled_bat</obj_property>
+      </wvobject>
+      <wvobject fp_name="/otile_tb/DUT/oled_rst" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_rst</obj_property>
+         <obj_property name="ObjectShortName">oled_rst</obj_property>
+      </wvobject>
+      <wvobject fp_name="/otile_tb/DUT/oled_cs" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_cs</obj_property>
+         <obj_property name="ObjectShortName">oled_cs</obj_property>
+      </wvobject>
+      <wvobject fp_name="/otile_tb/DUT/oled_sck" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_sck</obj_property>
+         <obj_property name="ObjectShortName">oled_sck</obj_property>
+      </wvobject>
+      <wvobject fp_name="/otile_tb/DUT/oled_mosi" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_mosi</obj_property>
+         <obj_property name="ObjectShortName">oled_mosi</obj_property>
+      </wvobject>
+      <wvobject fp_name="/otile_tb/DUT/oled_cd" type="logic" db_ref_id="1">
+         <obj_property name="ElementShortName">oled_cd</obj_property>
+         <obj_property name="ObjectShortName">oled_cd</obj_property>
+      </wvobject>
    </wvobject>
 </wave_config>
