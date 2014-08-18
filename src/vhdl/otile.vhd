@@ -1,6 +1,8 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
+Library UNISIM;
+use UNISIM.vcomponents.all;
 
 entity otile is
     port (
@@ -58,6 +60,17 @@ architecture Behavioral of otile is
     -- 8 rows of 128 columns -> 10 bit counter
     signal pointer, pointer_new : unsigned(9 downto 0);
 
+    signal pixcol, pixcol_new : unsigned(2 downto 0);
+    signal tilecol, tilecol_new : unsigned(4 downto 0);
+    signal tilerow, tilerow_new : unsigned(2 downto 0);
+    constant tilewidth : integer := 6;   -- Width of tile in pixels
+    constant tilecount : integer := 21;  -- Tiles per row
+    constant tileslack : integer := 2;   -- Extra pixel columns after last tile
+    constant tileheight : integer := 8;  -- Rows per screen
+
+	signal DOA, DOB, DIA, DIB : std_logic_vector(31 downto 0);
+	signal DIPA, DIPB : std_logic_vector(3 downto 0);
+	signal ADDRA, ADDRB : std_logic_vector(13 downto 0);
 begin
 
     transciever : entity work.spicomm
@@ -83,7 +96,7 @@ begin
     OLED_CS <= not spibusy;
     OLED_CD <= spicd;
 
-    comb : process(state, VDD_int, VBAT_int, nRESET_int, timer0, spibusy, spidata, spicd, pointer, cmdcounter)
+    comb : process(state, VDD_int, VBAT_int, nRESET_int, timer0, spibusy, spidata, spicd, pointer, cmdcounter, pixcol, tilecol, tilerow)
         -- reset delay, VDD to VBAT, 3 us
         constant delay1 : unsigned := to_unsigned(300, timer0'length);
 
@@ -101,6 +114,10 @@ begin
         variable spicd_next : std_logic;
         variable pointer_next : unsigned(pointer'range);
         variable cmdcounter_next : unsigned(cmdcounter'range);
+        variable pixcol_next : unsigned(pixcol'range);
+        variable tilecol_next : unsigned(tilecol'range);
+        variable tilerow_next : unsigned(tilerow'range);
+
     begin
         state_next := state;
 
@@ -120,6 +137,9 @@ begin
 
         cmdcounter_next := cmdcounter;
         pointer_next := pointer;
+        pixcol_next := pixcol;
+        tilecol_next := tilecol;
+        tilerow_next := tilerow;
 
         case state is
 
@@ -152,7 +172,6 @@ begin
                    VBAT_next := '1';
 
                 cmdcounter_next := to_unsigned(startup_len, cmdcounter'length);
-                pointer_next := (others => '0');
 
                 -- When the 100 ms timer expires...
                 if timer0 = to_unsigned(0, timer0'length) then
@@ -171,6 +190,10 @@ begin
 
             when ST_DISPWAIT =>
 --              spidata_next := (others => 'Z');
+                pointer_next := (others => '0');
+                pixcol_next := (others => '0');
+                tilecol_next := (others => '0');
+                tilerow_next := (others => '0');
                 if spibusy = '0' then
                     if timer0_next = "0" then
                         if cmdcounter = "0" then
@@ -185,15 +208,34 @@ begin
 
             -- Display is ready for use
             when ST_READY =>
-                if pointer(0) = '1' then
-                    spidata_next := '0' & pointer(4) & '0' & pointer(3) & '0' & pointer(2) & '0' & pointer(1);
-                else
-                    spidata_next := '0' & pointer(8) & '0' & pointer(7) & '0' & pointer(6) & '0' & pointer(5);
-                end if;
+                spidata_next := '0' & DOA(3) & '0' & DOA(2) & '0' & DOA(1) & '0' & DOA(0);
                 spistrobe_next := '1';
-                spicd_next := '1';  -- Sending data
+                spicd_next := '1';  -- Sending data to the OLED, not a command
+
+                -- Update our position counters
                 if spibusy = '1' then
+                    if tilecol = to_unsigned(tilecount, tilecol'length) then  -- If we are past the final tile, in the slack
+                        if pixcol = to_unsigned(tileslack - 1, pixcol'length) then
+                            pixcol_next := (others => '0');
+                            tilecol_next := (others => '0');
+                            -- FIXME the following can be simplified under certain conditions
+                            if tilerow = to_unsigned(tileheight - 1, tilerow'length) then
+                                tilerow_next := (others => '0');
+                            else
+                                tilerow_next := tilerow + "1";
+                            end if;
+                        else
+                            pixcol_next := pixcol + "1";
+                        end if;
+                    elsif pixcol = to_unsigned(tilewidth - 1, pixcol'length) then
+                        pixcol_next := (others => '0');
+                        tilecol_next := tilecol + "1";
+                    else
+                        pixcol_next := pixcol + "1";
+                    end if;
+                    -- For backwards-compatibility's sake
                     pointer_next := pointer + "1";
+
                     state_next := ST_WAIT;
                 end if;
 
@@ -241,6 +283,10 @@ begin
         cmdcounter_new <= cmdcounter_next;
         pointer_new <= pointer_next;
 
+        pixcol_new <= pixcol_next;
+        tilecol_new <= tilecol_next;
+        tilerow_new <= tilerow_next;
+
     end process;
 
     -- A few signals require asynchronous reset
@@ -272,8 +318,145 @@ begin
                 spicd <= spicd_new;
                 cmdcounter <= cmdcounter_new;
                 pointer <= pointer_new;
+                pixcol <= pixcol_new;
+                tilecol <= tilecol_new;
+                tilerow <= tilerow_new;
             end if;
         end if;
     end process;
+
+    mapram : RAMB16BWER
+    generic map (
+        -- DATA_WIDTH_A/DATA_WIDTH_B: 0, 1, 2, 4, 9, 18, or 36
+        DATA_WIDTH_A => 4,
+        DATA_WIDTH_B => 0,
+        -- DOA_REG/DOB_REG: Optional output register (0 or 1)
+        DOA_REG => 1,
+        DOB_REG => 0,
+        -- EN_RSTRAM_A/EN_RSTRAM_B: Enable/disable RST
+        EN_RSTRAM_A => TRUE,
+        EN_RSTRAM_B => TRUE,
+        -- INIT_00 to INIT_3F: Initial memory contents.
+        INIT_00 => X"00008700006999e000e11120004f44c000691120001953100001f10000e195e0",
+        INIT_01 => X"0008f80000d555e000f99960001111e0006999f000f5552000ca990000699960",
+        INIT_02 => X"0000000000000000000000000000000000000000000000000000000000000000",
+        INIT_03 => X"0000000000000000000000000000000000000000000000000000000000000000",
+        INIT_04 => X"000000000052596000338420004afa20004f4f40000000000000900000000000",
+        INIT_05 => X"000084200000330000888880000065000088e8800048e840000c210000012c00",
+        INIT_06 => X"00008700006999e000e11120004f44c000691120001953100001f10000e195e0",
+        INIT_07 => X"00085000008421000044444000012480000065000000660000ca990000699960",
+        INIT_08 => X"00f991e0000888f0001999f000c211f0002111e0006999f000f444f000e1f960",
+        INIT_09 => X"00e111e000f480f000f080f0001111f0001248f0000e11200001f10000f888f0",
+        INIT_0A => X"00e161e000c212c000e111e00000f00000699910001ac8f000d251e0000888f0",
+        INIT_0B => X"0011111000000000000f11000024800000011f00001195300008780000348430",
+        INIT_0C => X"00e555900008f80000d555e000f99960001111e0006999f000f5552000000000",
+        INIT_0D => X"00e111e000f008f000f0e0f00001f100001a4f00000e11200000f000007888f0",
+        INIT_0E => X"00e161e000c212c000e111e00021e00000255590008008f000f44480008444f0",
+        INIT_0F => X"0044f440000000000008611000007000001168000019531000086900001a4a10",
+        INIT_10 => X"00e9996000000f7000b4a1e0001911f000002e200000e12000008000001555f0",
+        INIT_11 => X"00e161e000c2f2c00001e080001f0f000012c210000e99e0001e00c000555e40",
+        INIT_12 => X"00999ff000005800008448000088a8800024842000aaaaa000d303d000195310",
+        INIT_13 => X"005a5a5000c2c2c00000e120000e996000000f200044c640005d555000555d50",
+        INIT_14 => X"00a55580000070000044f44000d222d000199f900002f2c00000f00000000000",
+        INIT_15 => X"0000000000e1d5e000000000000000000025a48000d5559000e55de000000000",
+        INIT_16 => X"00088000000f0f0000088c2000000000008440000044c4000011d11000000000",
+        INIT_17 => X"0021196000fffff000d39080007a62800084a520000444000004c40000021040",
+        INIT_18 => X"004465800099f8f000f444f000f444f000f444f000f444f000f444f000f444f0",
+        INIT_19 => X"0001f1000001f1000001f1000001f100001555f0001555f0001555f0001555f0",
+        INIT_1A => X"0024842000e111e000e111e000e111e000e111e000e111e000f248f000e19f80",
+        INIT_1B => X"000c22f000c222f00008780000e111e000e111e000e111e000e111e000c2a6d0",
+        INIT_1C => X"0004658000d5e57000f5552000f5552000f5552000f5552000f5552000f55520",
+        INIT_1D => X"0000f0000000f0000000f0000000f00000d555e000d555e000d555e000d555e0",
+        INIT_1E => X"008a8880006999600069996000699960006999600069996000f008f000e99960",
+        INIT_1F => X"00000000000844f00008690000e111e000e111e000e111e000e111e000c2e3c0",
+        INIT_20 => X"0065444000044210004555700007210000465440003444200000720000354430",
+        INIT_21 => X"0024300000011100007000000011110000000070000111000034443000344430",
+        INIT_22 => X"0000000000000000000000000000000000000000000000000000000000000000",
+        INIT_23 => X"0000000000000000000000000000000000000000000000000000000000000000",
+        INIT_24 => X"0000650000025430002106600022721000171710000707000000700000000000",
+        INIT_25 => X"0021000000000000000000000000000000003000001030100001240000042100",
+        INIT_26 => X"0065444000044210004555700007210000465440003444200000720000354430",
+        INIT_27 => X"0034442000012400001111100004210000003300000033000034443000344430",
+        INIT_28 => X"0024443000444470004444700012447000244430003444700034443000344420",
+        INIT_29 => X"0034443000700170007212700000007000421070004740000004740000700070",
+        INIT_2A => X"0070007000700070007000700044744000444430003444700034443000344470",
+        INIT_2B => X"0000000000124210000744000000012000044700006544400070007000610160",
+        INIT_2C => X"0011110000243000000111000070000000111100000000700001110000012400",
+        INIT_2D => X"0001110000011010001101100000740000100700000500000000200000000070",
+        INIT_2E => X"0010001000100010001000100011711000111100000110100011110000011110",
+        INIT_2F => X"0053135000422210000034400000700000443000001111100010001000100010",
+        INIT_30 => X"0005200000223120001001000000007000100740002531000005210000511150",
+        INIT_31 => X"0001010000013100001111000011111000001220000344300001227000111000",
+        INIT_32 => X"0044477000244430003443000000200000210120002222200012221000445640",
+        INIT_33 => X"0052525000121210002430000003442000444700001311100000124000421000",
+        INIT_34 => X"0005552000007000005313500052225000244300000272100000500000000000",
+        INIT_35 => X"0044444000345530000000000064444000252100003555000035553000040400",
+        INIT_36 => X"0000000000474730007007000004200000355000002542000011711000075700",
+        INIT_37 => X"0000500000777770000100700010007000012520000757000000720000000000",
+        INIT_38 => X"0044443000447430000353000041114000455540000555000005310000013500",
+        INIT_39 => X"0005150000055500000531000001350000511150001555100015311000113510",
+        INIT_3A => X"0021012000411140004555400005550000053100000135000054445000344700",
+        INIT_3B => X"0002553000122270003420300050005000144410001420100010241000532210",
+        INIT_3C => X"0002221000110110000353000005150000455540000555000005310000013500",
+        INIT_3D => X"0002020000022200000420000000240000051500000555000005310000013500",
+        INIT_3E => X"0002000000020200002222200002220000042000000024000045545000052000",
+        INIT_3F => X"0000000000012270001420100002020000022200000420000000240000031100",
+        -- INIT_A/INIT_B: Initial values on output port
+        INIT_A => X"000000000",
+        INIT_B => X"000000000",
+        -- INIT_FILE: Optional file used to specify initial RAM contents
+        INIT_FILE => "NONE",
+        -- RSTTYPE: "SYNC" or "ASYNC"
+        RSTTYPE => "SYNC",
+        -- RST_PRIORITY_A/RST_PRIORITY_B: "CE" or "SR"
+        RST_PRIORITY_A => "CE",
+        RST_PRIORITY_B => "CE",
+        -- SIM_COLLISION_CHECK: Collision check enable "ALL", "WARNING_ONLY", "GENERATE_X_ONLY" or "NONE"
+        SIM_COLLISION_CHECK => "ALL",
+        -- SIM_DEVICE: Must be set to "SPARTAN6" for proper simulation behavior
+        SIM_DEVICE => "SPARTAN6",
+        -- SRVAL_A/SRVAL_B: Set/Reset value for RAM output
+        SRVAL_A => X"000000000",
+        SRVAL_B => X"000000000",
+        -- WRITE_MODE_A/WRITE_MODE_B: "WRITE_FIRST", "READ_FIRST", or "NO_CHANGE"
+        WRITE_MODE_A => "WRITE_FIRST",
+        WRITE_MODE_B => "WRITE_FIRST"
+    )
+    port map (
+        -- Port A Data: 32-bit (each) output: Port A data
+        DOA => DOA,       -- 32-bit output: A port data output
+        DOPA => open,     -- 4-bit output: A port parity output
+        -- Port B Data: 32-bit (each) output: Port B data
+        DOB => DOB,       -- 32-bit output: B port data output
+        DOPB => open,     -- 4-bit output: B port parity output
+        -- Port A Data: 32-bit (each) input: Port A data
+        DIA => DIA,       -- 32-bit input: A port data input
+        DIPA => DIPA,     -- 4-bit input: A port parity input
+        -- Port B Data: 32-bit (each) input: Port B data
+        DIB => DIB,       -- 32-bit input: B port data input
+        DIPB => DIPB,     -- 4-bit input: B port parity input
+        -- Port A Address/Control Signals: 14-bit (each) input: Port A address and control signals
+        ADDRA => ADDRA,   -- 14-bit input: A port address input
+        CLKA => CLK,      -- 1-bit input: A port clock input
+        ENA => '1',       -- 1-bit input: A port enable input
+        REGCEA => '1',    -- 1-bit input: A port register clock enable input
+        RSTA => RST,      -- 1-bit input: A port register set/reset input
+        WEA => "0000",    -- 4-bit input: Port A byte-wide write enable input
+        -- Port B Address/Control Signals: 14-bit (each) input: Port B address and control signals
+        ADDRB => ADDRB,   -- 14-bit input: B port address input
+        CLKB => CLK,      -- 1-bit input: B port clock input
+        ENB => '0',       -- 1-bit input: B port enable input
+        REGCEB => '0',    -- 1-bit input: B port register clock enable input
+        RSTB => RST,      -- 1-bit input: B port register set/reset input
+        WEB => "0000"     -- 4-bit input: Port B byte-wide write enable input
+    );
+
+	ADDRA <= tilerow(0) & "1" & std_logic_vector(tilerow(2 downto 1)) & std_logic_vector(tilecol) & std_logic_vector(pixcol) & "00";
+	ADDRB <= (others => '0');
+	DIA <= (others => '0');
+	DIPA <= (others => '0');
+	DIB <= (others => '0');
+	DIPB <= (others => '0');
+
 
 end Behavioral;
