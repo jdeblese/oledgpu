@@ -68,9 +68,9 @@ architecture Behavioral of otile is
     constant tileslack : integer := 2;   -- Extra pixel columns after last tile
     constant tileheight : integer := 8;  -- Rows per screen
 
-	signal DOA, DOB, DIA, DIB : std_logic_vector(31 downto 0);
-	signal DIPA, DIPB : std_logic_vector(3 downto 0);
-	signal ADDRA, ADDRB : std_logic_vector(13 downto 0);
+    signal DOA, DOB, DIB, DOA2, DOB2, DIB2 : std_logic_vector(31 downto 0);
+    signal DIPB, DIPB2 : std_logic_vector(3 downto 0);
+    signal ADDRA, ADDRB, ADDRA2, ADDRB2 : std_logic_vector(13 downto 0);
 begin
 
     transciever : entity work.spicomm
@@ -96,7 +96,7 @@ begin
     OLED_CS <= not spibusy;
     OLED_CD <= spicd;
 
-    comb : process(state, VDD_int, VBAT_int, nRESET_int, timer0, spibusy, spidata, spicd, pointer, cmdcounter, pixcol, tilecol, tilerow)
+    comb : process(state, VDD_int, VBAT_int, nRESET_int, timer0, spibusy, spidata, spicd, pointer, cmdcounter, pixcol, tilecol, tilerow, DOA, DOA2)
         -- reset delay, VDD to VBAT, 3 us
         constant delay1 : unsigned := to_unsigned(300, timer0'length);
 
@@ -118,6 +118,7 @@ begin
         variable tilecol_next : unsigned(tilecol'range);
         variable tilerow_next : unsigned(tilerow'range);
 
+        variable pixdata : std_logic_vector(3 downto 0);
     begin
         state_next := state;
 
@@ -208,7 +209,12 @@ begin
 
             -- Display is ready for use
             when ST_READY =>
-                spidata_next := '0' & DOA(3) & '0' & DOA(2) & '0' & DOA(1) & '0' & DOA(0);
+                if DOA2(15) = '1' then
+                    pixdata := not DOA(3 downto 0);
+                else
+                    pixdata := DOA(3 downto 0);
+                end if;
+                spidata_next := '0' & pixdata(3) & '0' & pixdata(2) & '0' & pixdata(1) & '0' & pixdata(0);
                 spistrobe_next := '1';
                 spicd_next := '1';  -- Sending data to the OLED, not a command
 
@@ -430,8 +436,8 @@ begin
         DOB => DOB,       -- 32-bit output: B port data output
         DOPB => open,     -- 4-bit output: B port parity output
         -- Port A Data: 32-bit (each) input: Port A data
-        DIA => DIA,       -- 32-bit input: A port data input
-        DIPA => DIPA,     -- 4-bit input: A port parity input
+        DIA => x"00000000", -- 32-bit input: A port data input
+        DIPA => x"0",     -- 4-bit input: A port parity input
         -- Port B Data: 32-bit (each) input: Port B data
         DIB => DIB,       -- 32-bit input: B port data input
         DIPB => DIPB,     -- 4-bit input: B port parity input
@@ -451,12 +457,93 @@ begin
         WEB => "0000"     -- 4-bit input: Port B byte-wide write enable input
     );
 
-	ADDRA <= tilerow(0) & "1" & std_logic_vector(tilerow(2 downto 1)) & std_logic_vector(tilecol) & std_logic_vector(pixcol) & "00";
-	ADDRB <= (others => '0');
-	DIA <= (others => '0');
-	DIPA <= (others => '0');
-	DIB <= (others => '0');
-	DIPB <= (others => '0');
+    ADDRA <= tilerow(0) & DOA2(7 downto 0) & std_logic_vector(pixcol) & "00";
+    ADDRB <= (others => '0');
+    DIB <= (others => '0');
+    DIPB <= (others => '0');
 
+
+    tileram : RAMB16BWER
+    generic map (
+        -- DATA_WIDTH_A/DATA_WIDTH_B: 0, 1, 2, 4, 9, 18, or 36
+        DATA_WIDTH_A => 18,
+        DATA_WIDTH_B => 0,
+        -- DOA_REG/DOB_REG: Optional output register (0 or 1)
+        DOA_REG => 1,
+        DOB_REG => 0,
+        -- EN_RSTRAM_A/EN_RSTRAM_B: Enable/disable RST
+        EN_RSTRAM_A => TRUE,
+        EN_RSTRAM_B => TRUE,
+        -- INIT_00 to INIT_3F: Initial memory contents.
+        INIT_00 => X"0020002000200020002000200020002000200020007a0048004d003080300031",
+        INIT_01 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_02 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_03 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_04 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_05 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_06 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_07 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_08 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_09 => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_0A => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_0B => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_0C => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_0D => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_0E => X"0020002000200020002000200020002000200020002000200020002000200020",
+        INIT_0F => X"0020002000200020002000200020002000200020002000200020002000200020",
+        -- INIT_A/INIT_B: Initial values on output port
+        INIT_A => X"000000000",
+        INIT_B => X"000000000",
+        -- INIT_FILE: Optional file used to specify initial RAM contents
+        INIT_FILE => "NONE",
+        -- RSTTYPE: "SYNC" or "ASYNC"
+        RSTTYPE => "SYNC",
+        -- RST_PRIORITY_A/RST_PRIORITY_B: "CE" or "SR"
+        RST_PRIORITY_A => "CE",
+        RST_PRIORITY_B => "CE",
+        -- SIM_COLLISION_CHECK: Collision check enable "ALL", "WARNING_ONLY", "GENERATE_X_ONLY" or "NONE"
+        SIM_COLLISION_CHECK => "ALL",
+        -- SIM_DEVICE: Must be set to "SPARTAN6" for proper simulation behavior
+        SIM_DEVICE => "SPARTAN6",
+        -- SRVAL_A/SRVAL_B: Set/Reset value for RAM output
+        SRVAL_A => X"000000000",
+        SRVAL_B => X"000000000",
+        -- WRITE_MODE_A/WRITE_MODE_B: "WRITE_FIRST", "READ_FIRST", or "NO_CHANGE"
+        WRITE_MODE_A => "WRITE_FIRST",
+        WRITE_MODE_B => "WRITE_FIRST"
+    )
+    port map (
+        -- Port A Data: 32-bit (each) output: Port A data
+        DOA => DOA2,      -- 32-bit output: A port data output
+        DOPA => open,     -- 4-bit output: A port parity output
+        -- Port B Data: 32-bit (each) output: Port B data
+        DOB => DOB2,      -- 32-bit output: B port data output
+        DOPB => open,     -- 4-bit output: B port parity output
+        -- Port A Data: 32-bit (each) input: Port A data
+        DIA => x"00000000", -- 32-bit input: A port data input
+        DIPA => x"0",     -- 4-bit input: A port parity input
+        -- Port B Data: 32-bit (each) input: Port B data
+        DIB => DIB2,      -- 32-bit input: B port data input
+        DIPB => DIPB2,    -- 4-bit input: B port parity input
+        -- Port A Address/Control Signals: 14-bit (each) input: Port A address and control signals
+        ADDRA => ADDRA2,  -- 14-bit input: A port address input
+        CLKA => CLK,      -- 1-bit input: A port clock input
+        ENA => '1',       -- 1-bit input: A port enable input
+        REGCEA => '1',    -- 1-bit input: A port register clock enable input
+        RSTA => RST,      -- 1-bit input: A port register set/reset input
+        WEA => "0000",    -- 4-bit input: Port A byte-wide write enable input
+        -- Port B Address/Control Signals: 14-bit (each) input: Port B address and control signals
+        ADDRB => ADDRB2,  -- 14-bit input: B port address input
+        CLKB => CLK,      -- 1-bit input: B port clock input
+        ENB => '0',       -- 1-bit input: B port enable input
+        REGCEB => '0',    -- 1-bit input: B port register clock enable input
+        RSTB => RST,      -- 1-bit input: B port register set/reset input
+        WEB => "0000"     -- 4-bit input: Port B byte-wide write enable input
+    );
+
+    ADDRA2 <= "000" & std_logic_vector(tilerow(2 downto 1)) & std_logic_vector(tilecol) & "0000";
+    ADDRB2 <= (others => '0');
+    DIB2 <= (others => '0');
+    DIPB2 <= (others => '0');
 
 end Behavioral;
